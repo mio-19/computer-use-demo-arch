@@ -1,13 +1,10 @@
-FROM docker.io/ubuntu:22.04
+FROM docker.io/archlinux/archlinux:base-devel
 
-ENV DEBIAN_FRONTEND=noninteractive
-ENV DEBIAN_PRIORITY=high
-
-RUN apt-get update && \
-    apt-get -y upgrade && \
-    apt-get -y install \
+# Install base packages
+RUN pacman -Syu --noconfirm && \
+    pacman -S --noconfirm \
     # UI Requirements
-    xvfb \
+    xorg-server-xvfb \
     xterm \
     xdotool \
     scrot \
@@ -15,56 +12,59 @@ RUN apt-get update && \
     sudo \
     mutter \
     x11vnc \
-    # Python/pyenv reqs
-    build-essential \
-    libssl-dev  \
-    zlib1g-dev \
-    libbz2-dev \
-    libreadline-dev \
-    libsqlite3-dev \
+    # Development tools
+    base-devel \
+    openssl \
+    zlib \
+    bzip2 \
+    readline \
+    sqlite \
     curl \
     git \
-    libncursesw5-dev \
-    xz-utils \
-    tk-dev \
-    libxml2-dev \
-    libxmlsec1-dev \
-    libffi-dev \
-    liblzma-dev \
+    ncurses \
+    xz \
+    tk \
+    libxml2 \
+    libxslt \
+    libffi \
     # Network tools
     net-tools \
-    netcat \
-    # PPA req
-    software-properties-common && \
-    # Userland apps
-    sudo add-apt-repository ppa:mozillateam/ppa && \
-    sudo apt-get install -y --no-install-recommends \
-    libreoffice \
-    firefox-esr \
-    x11-apps \
+    gnu-netcat \
+    # Applications
+    libreoffice-fresh \
+    firefox \
+    xorg-apps \
     xpdf \
     gedit \
-    xpaint \
+    mtpaint \
     tint2 \
     galculator \
     pcmanfm \
-    unzip && \
-    apt-get clean
+    unzip
+
+# Install paru-bin from AUR
+RUN useradd -m -G wheel builder && \
+    echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers && \
+    cd /home/builder && \
+    sudo -u builder bash -c 'curl -O "https://aur.archlinux.org/cgit/aur.git/snapshot/paru-bin.tar.gz" && \
+    tar xvf paru-bin.tar.gz && \
+    cd paru-bin && \
+    makepkg -si --noconfirm'
 
 # Install noVNC
 RUN git clone --branch v1.5.0 https://github.com/novnc/noVNC.git /opt/noVNC && \
     git clone --branch v0.12.0 https://github.com/novnc/websockify /opt/noVNC/utils/websockify && \
     ln -s /opt/noVNC/vnc.html /opt/noVNC/index.html
 
-# setup user
+# Setup user
 ENV USERNAME=computeruse
 ENV HOME=/home/$USERNAME
-RUN useradd -m -s /bin/bash -d $HOME $USERNAME
-RUN echo "${USERNAME} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+RUN useradd -m -s /bin/bash -d $HOME $USERNAME && \
+    echo "${USERNAME} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 USER computeruse
 WORKDIR $HOME
 
-# setup python
+# Setup python
 RUN git clone https://github.com/pyenv/pyenv.git ~/.pyenv && \
     cd ~/.pyenv && src/configure && make -C src && cd .. && \
     echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc && \
@@ -86,11 +86,11 @@ ENV PATH="$HOME/.pyenv/shims:$HOME/.pyenv/bin:$PATH"
 RUN python -m pip install --upgrade pip==23.1.2 setuptools==58.0.4 wheel==0.40.0 && \
     python -m pip config set global.disable-pip-version-check true
 
-# only reinstall if requirements.txt changes
+# Only reinstall if requirements.txt changes
 COPY --chown=$USERNAME:$USERNAME computer_use_demo/requirements.txt $HOME/computer_use_demo/requirements.txt
 RUN python -m pip install -r $HOME/computer_use_demo/requirements.txt
 
-# setup desktop env & app
+# Setup desktop env & app
 COPY --chown=$USERNAME:$USERNAME image/ $HOME
 COPY --chown=$USERNAME:$USERNAME computer_use_demo/ $HOME/computer_use_demo/
 
