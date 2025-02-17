@@ -6,10 +6,16 @@ This is an Arch Linux-based version of the Computer Use Demo, which provides the
 
 ### Building the Image
 
-First, build the local Docker image:
+First, build the local Docker image. Choose the appropriate version based on your architecture:
 
+For x86_64/AMD64:
 ```bash
 docker build -t computer-use-demo-arch computer-use-demo/
+```
+
+For ARM64/AArch64:
+```bash
+docker build -f computer-use-demo/Dockerfile.arm -t computer-use-demo-arch-arm computer-use-demo/
 ```
 
 ### Running with Anthropic API
@@ -123,6 +129,29 @@ docker run \
     -p 6080:6080 \
     -p 8080:8080 \
     -it computer-use-demo-arch
+```
+
+## Architecture Support
+
+This project provides two Dockerfile variants:
+- `Dockerfile`: Uses `archlinux:base-devel` as base image, optimized for x86_64/AMD64 systems
+- `Dockerfile.arm`: Uses `menci/archlinuxarm:base-devel` as base image, optimized for ARM64/AArch64 systems (e.g., Apple Silicon, Raspberry Pi 4)
+
+When running the container, make sure to use the appropriate image tag:
+- For x86_64/AMD64: Use `computer-use-demo-arch` in the docker run commands
+- For ARM64/AArch64: Use `computer-use-demo-arch-arm` in the docker run commands
+
+For example, running on ARM with the Anthropic API:
+```bash
+export ANTHROPIC_API_KEY=%your_api_key%
+docker run \
+    -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
+    -v $HOME/.anthropic:/home/computeruse/.anthropic \
+    -p 5900:5900 \
+    -p 8501:8501 \
+    -p 6080:6080 \
+    -p 8080:8080 \
+    -it computer-use-demo-arch-arm
 ```
 
 ## Note About Platform Compatibility
